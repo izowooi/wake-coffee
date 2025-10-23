@@ -20,6 +20,7 @@ class DataManager {
         static let shiftWorkSchedule = "shift_work_schedule"
         static let statistics = "statistics"
         static let settings = "settings"
+        static let workMode = "work_mode"
     }
 
     private init() {}
@@ -113,6 +114,19 @@ class DataManager {
 
     func deleteAllStatistics() {
         defaults.removeObject(forKey: Keys.statistics)
+    }
+
+    // MARK: - Work Mode
+
+    func saveWorkMode(_ mode: WorkMode) {
+        defaults.set(mode.rawValue, forKey: Keys.workMode)
+    }
+
+    func loadWorkMode() -> WorkMode? {
+        guard let rawValue = defaults.string(forKey: Keys.workMode) else {
+            return nil
+        }
+        return WorkMode(rawValue: rawValue)
     }
 
     // MARK: - Settings
