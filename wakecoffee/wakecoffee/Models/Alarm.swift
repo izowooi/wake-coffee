@@ -43,6 +43,7 @@ struct Alarm: Identifiable, Codable {
     var isEnabled: Bool  // 활성화 여부
     var repeatDays: Set<Int>  // 반복 요일 (1=일요일, 2=월요일, ..., 7=토요일)
     var workPeriod: WorkPeriod?  // 일반근무일 경우 구간
+    var intervalHours: Int?  // 교대근무 알람 간격 (시간 단위)
 
     init(
         id: UUID = UUID(),
@@ -50,7 +51,8 @@ struct Alarm: Identifiable, Codable {
         purpose: AlarmPurpose,
         isEnabled: Bool = true,
         repeatDays: Set<Int> = [2, 3, 4, 5, 6], // 기본값: 월~금
-        workPeriod: WorkPeriod? = nil
+        workPeriod: WorkPeriod? = nil,
+        intervalHours: Int? = nil
     ) {
         self.id = id
         self.time = time
@@ -58,6 +60,7 @@ struct Alarm: Identifiable, Codable {
         self.isEnabled = isEnabled
         self.repeatDays = repeatDays
         self.workPeriod = workPeriod
+        self.intervalHours = intervalHours
     }
 
     // 시간만 추출 (HH:mm 형식)

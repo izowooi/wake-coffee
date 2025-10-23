@@ -175,7 +175,8 @@ struct AddShiftAlarmSheet: View {
                     purpose: selectedPurpose,
                     isEnabled: true,
                     repeatDays: [1, 2, 3, 4, 5, 6, 7], // 교대근무는 패턴에 따라 동작
-                    workPeriod: .duringWork
+                    workPeriod: .duringWork,
+                    intervalHours: intervalHours
                 )
                 alarms.append(alarm)
             }

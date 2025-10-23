@@ -68,6 +68,13 @@ struct TimelineView: View {
                         )
                         .padding(.horizontal)
                         .padding(.vertical, 4)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                onDeleteAlarm?(alarm)
+                            } label: {
+                                Label("삭제", systemImage: "trash")
+                            }
+                        }
 
                     case .workTimeMarker(let time, let isStart):
                         WorkTimeMarkerView(time: time, isStart: isStart)

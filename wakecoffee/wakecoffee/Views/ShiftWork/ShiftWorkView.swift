@@ -57,9 +57,15 @@ struct ShiftWorkView: View {
                         } else {
                             VStack(spacing: 8) {
                                 ForEach(viewModel.alarms) { alarm in
-                                    ShiftAlarmCard(alarm: alarm) {
-                                        viewModel.deleteAlarm(alarm)
-                                    }
+                                    ShiftAlarmCard(
+                                        alarm: alarm,
+                                        onToggle: {
+                                            viewModel.toggleAlarm(alarm)
+                                        },
+                                        onDelete: {
+                                            viewModel.deleteAlarm(alarm)
+                                        }
+                                    )
                                 }
                             }
                             .padding(.horizontal)
@@ -102,6 +108,7 @@ struct ShiftWorkView: View {
 // 교대근무용 알람 카드
 struct ShiftAlarmCard: View {
     let alarm: Alarm
+    let onToggle: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -121,8 +128,11 @@ struct ShiftAlarmCard: View {
 
             Spacer()
 
-            Toggle("", isOn: .constant(alarm.isEnabled))
-                .labelsHidden()
+            Toggle("", isOn: Binding(
+                get: { alarm.isEnabled },
+                set: { _ in onToggle() }
+            ))
+            .labelsHidden()
         }
         .padding()
         .background(
@@ -130,6 +140,14 @@ struct ShiftAlarmCard: View {
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
         )
+        .opacity(alarm.isEnabled ? 1.0 : 0.5)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("삭제", systemImage: "trash")
+            }
+        }
         .contextMenu {
             Button(role: .destructive) {
                 onDelete()
