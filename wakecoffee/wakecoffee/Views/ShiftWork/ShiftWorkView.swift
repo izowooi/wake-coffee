@@ -114,7 +114,7 @@ struct ShiftAlarmCard: View {
                     .font(.body)
                     .fontWeight(.medium)
 
-                Text("근무 중 2시간마다")
+                Text(intervalText)
                     .font(.caption)
                     .foregroundColor(.gray)
             }
@@ -137,6 +137,13 @@ struct ShiftAlarmCard: View {
                 Label("삭제", systemImage: "trash")
             }
         }
+    }
+
+    private var intervalText: String {
+        if let interval = alarm.intervalHours {
+            return "근무 중 \(interval)시간마다"
+        }
+        return "근무 중"
     }
 }
 
