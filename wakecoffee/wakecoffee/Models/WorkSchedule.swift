@@ -7,22 +7,115 @@
 
 import Foundation
 
-// 교대 근무 유형
-enum ShiftType: String, CaseIterable, Codable {
-    case twoShift = "2교대"
-    case threeShift = "3교대"
-    case fourShift = "4교대"
-    case custom = "커스텀"
+// 교대 근무 패턴 정의
+struct ShiftPattern: Codable, Equatable, Identifiable {
+    let id: String
+    let name: String
+    let description: String
+    let cycle: [ShiftTime]  // 반복되는 근무 패턴 (예: [.day, .day, .night, .night, .off, .off])
 
-    // 각 교대의 기본 사이클 (일 단위)
     var cycleDays: Int {
-        switch self {
-        case .twoShift: return 4  // 2일 주간, 2일 휴무
-        case .threeShift: return 6  // 2일 주간, 2일 야간, 2일 휴무
-        case .fourShift: return 8  // 2일 주간, 2일 야간, 2일 저녁, 2일 휴무
-        case .custom: return 0
-        }
+        return cycle.count
     }
+
+    // 특정 날짜의 근무 시간대 계산
+    func getShiftTime(daysSinceStart: Int) -> ShiftTime {
+        guard cycleDays > 0 else { return .off }
+        let position = daysSinceStart % cycleDays
+        return cycle[position]
+    }
+
+    // 패턴의 간략한 표시 (예: "주2야2휴2")
+    var shortPattern: String {
+        var result = ""
+        var currentType: ShiftTime?
+        var count = 0
+
+        for shift in cycle {
+            if shift == currentType {
+                count += 1
+            } else {
+                if let type = currentType {
+                    result += "\(type.shortName)\(count)"
+                }
+                currentType = shift
+                count = 1
+            }
+        }
+
+        if let type = currentType {
+            result += "\(type.shortName)\(count)"
+        }
+
+        return result
+    }
+}
+
+// 미리 정의된 교대 근무 패턴들
+extension ShiftPattern {
+    static let presets: [ShiftPattern] = [
+        // 5조2교대
+        ShiftPattern(
+            id: "5_2_shift_1",
+            name: "5조2교대",
+            description: "주2,휴3,야2,휴3",
+            cycle: [.day, .day, .off, .off, .off, .night, .night, .off, .off, .off]
+        ),
+
+        // 4조2교대 변형들
+        ShiftPattern(
+            id: "4_2_shift_1",
+            name: "4조2교대",
+            description: "주2,야2,휴4",
+            cycle: [.day, .day, .night, .night, .off, .off, .off, .off]
+        ),
+        ShiftPattern(
+            id: "4_2_shift_2",
+            name: "4조2교대",
+            description: "주2,휴2,야2,휴2",
+            cycle: [.day, .day, .off, .off, .night, .night, .off, .off]
+        ),
+        ShiftPattern(
+            id: "4_2_shift_3",
+            name: "4조2교대",
+            description: "주3,휴3,야3,휴3",
+            cycle: [.day, .day, .day, .off, .off, .off, .night, .night, .night, .off, .off, .off]
+        ),
+
+        // 3조2교대 변형들
+        ShiftPattern(
+            id: "3_2_shift_1",
+            name: "3조2교대",
+            description: "주4,휴2,야4,휴2",
+            cycle: [.day, .day, .day, .day, .off, .off, .night, .night, .night, .night, .off, .off]
+        ),
+        ShiftPattern(
+            id: "3_2_shift_2",
+            name: "3조2교대",
+            description: "주야휴",
+            cycle: [.day, .night, .off]
+        ),
+        ShiftPattern(
+            id: "3_2_shift_3",
+            name: "3조2교대",
+            description: "주2,야2,휴2",
+            cycle: [.day, .day, .night, .night, .off, .off]
+        ),
+        ShiftPattern(
+            id: "3_2_shift_4",
+            name: "3조2교대",
+            description: "주3,야1,휴1,야1,휴1",
+            cycle: [.day, .day, .day, .night, .off, .night, .off]
+        ),
+        ShiftPattern(
+            id: "3_2_shift_5",
+            name: "3조2교대",
+            description: "주2,휴1,야2,휴1",
+            cycle: [.day, .day, .off, .night, .night, .off]
+        ),
+    ]
+
+    static let `default` = presets[2] // 4조2교대 (주2,야2,휴4)를 기본값으로
 }
 
 // 근무 시간대
@@ -38,6 +131,15 @@ enum ShiftTime: String, Codable {
         case .night: return "🌙"
         case .evening: return "🌆"
         case .off: return "⚪"
+        }
+    }
+
+    var shortName: String {
+        switch self {
+        case .day: return "주"
+        case .night: return "야"
+        case .evening: return "석"
+        case .off: return "휴"
         }
     }
 
@@ -89,55 +191,57 @@ struct RegularWorkSchedule: Codable, Equatable {
 
 // 교대 근무 스케줄
 struct ShiftWorkSchedule: Codable, Equatable {
-    var shiftType: ShiftType
+    var pattern: ShiftPattern
     var startDate: Date  // 패턴 시작일
     var dayShiftStart: Date
     var dayShiftEnd: Date
     var nightShiftStart: Date
     var nightShiftEnd: Date
+    var eveningShiftStart: Date
+    var eveningShiftEnd: Date
 
     init(
-        shiftType: ShiftType = .twoShift,
+        pattern: ShiftPattern = ShiftPattern.default,
         startDate: Date = Date(),
         dayShiftStart: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0))!,
         dayShiftEnd: Date = Calendar.current.date(from: DateComponents(hour: 21, minute: 0))!,
         nightShiftStart: Date = Calendar.current.date(from: DateComponents(hour: 21, minute: 0))!,
-        nightShiftEnd: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0))!
+        nightShiftEnd: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0))!,
+        eveningShiftStart: Date = Calendar.current.date(from: DateComponents(hour: 15, minute: 0))!,
+        eveningShiftEnd: Date = Calendar.current.date(from: DateComponents(hour: 23, minute: 0))!
     ) {
-        self.shiftType = shiftType
+        self.pattern = pattern
         self.startDate = startDate
         self.dayShiftStart = dayShiftStart
         self.dayShiftEnd = dayShiftEnd
         self.nightShiftStart = nightShiftStart
         self.nightShiftEnd = nightShiftEnd
+        self.eveningShiftStart = eveningShiftStart
+        self.eveningShiftEnd = eveningShiftEnd
     }
 
-    // 특정 날짜의 근무 시간대 계산 (샘플 로직)
+    // 특정 날짜의 근무 시간대 계산
     func getShiftTime(for date: Date) -> ShiftTime {
         let daysSinceStart = Calendar.current.dateComponents([.day], from: startDate, to: date).day ?? 0
-        let cyclePosition = daysSinceStart % shiftType.cycleDays
+        return pattern.getShiftTime(daysSinceStart: daysSinceStart)
+    }
 
-        switch shiftType {
-        case .twoShift:
-            // 2일 주간, 2일 휴무
-            if cyclePosition < 2 { return .day }
-            else { return .off }
+    // 근무 시간대별 시작/종료 시간 가져오기
+    func getShiftStartTime(for shiftTime: ShiftTime) -> Date {
+        switch shiftTime {
+        case .day: return dayShiftStart
+        case .night: return nightShiftStart
+        case .evening: return eveningShiftStart
+        case .off: return Date()
+        }
+    }
 
-        case .threeShift:
-            // 2일 주간, 2일 야간, 2일 휴무
-            if cyclePosition < 2 { return .day }
-            else if cyclePosition < 4 { return .night }
-            else { return .off }
-
-        case .fourShift:
-            // 2일 주간, 2일 야간, 2일 저녁, 2일 휴무
-            if cyclePosition < 2 { return .day }
-            else if cyclePosition < 4 { return .night }
-            else if cyclePosition < 6 { return .evening }
-            else { return .off }
-
-        case .custom:
-            return .off
+    func getShiftEndTime(for shiftTime: ShiftTime) -> Date {
+        switch shiftTime {
+        case .day: return dayShiftEnd
+        case .night: return nightShiftEnd
+        case .evening: return eveningShiftEnd
+        case .off: return Date()
         }
     }
 }
@@ -145,7 +249,7 @@ struct ShiftWorkSchedule: Codable, Equatable {
 // 샘플 데이터
 extension ShiftWorkSchedule {
     static let sample = ShiftWorkSchedule(
-        shiftType: .twoShift,
+        pattern: ShiftPattern.default,
         startDate: Date()
     )
 }

@@ -33,14 +33,20 @@ struct SchedulePreview: View {
                 }
             }
 
-            // 범례
+            // 범례 - 패턴에 포함된 근무 시간대만 표시
             HStack(spacing: 16) {
-                legendItem(icon: "🌞", label: "주간")
-                legendItem(icon: "🌙", label: "야간")
-                if schedule.shiftType == .fourShift {
+                if schedule.pattern.cycle.contains(.day) {
+                    legendItem(icon: "🌞", label: "주간")
+                }
+                if schedule.pattern.cycle.contains(.night) {
+                    legendItem(icon: "🌙", label: "야간")
+                }
+                if schedule.pattern.cycle.contains(.evening) {
                     legendItem(icon: "🌆", label: "저녁")
                 }
-                legendItem(icon: "⚪", label: "휴무")
+                if schedule.pattern.cycle.contains(.off) {
+                    legendItem(icon: "⚪", label: "휴무")
+                }
             }
             .font(.caption)
             .padding(.top, 8)
@@ -130,20 +136,19 @@ struct SchedulePreview: View {
 
     private func shiftTimeString(for shiftTime: ShiftTime) -> String {
         let calendar = Calendar.current
-        switch shiftTime {
-        case .day:
-            let start = calendar.component(.hour, from: schedule.dayShiftStart)
-            let end = calendar.component(.hour, from: schedule.dayShiftEnd)
-            return "\(String(format: "%02d:00", start))-\(String(format: "%02d:00", end))"
-        case .night:
-            let start = calendar.component(.hour, from: schedule.nightShiftStart)
-            let end = calendar.component(.hour, from: schedule.nightShiftEnd)
-            return "\(String(format: "%02d:00", start))-\(String(format: "%02d:00", end))"
-        case .evening:
-            return "15:00-23:00" // 4교대의 저녁 근무
-        case .off:
+        let startTime = schedule.getShiftStartTime(for: shiftTime)
+        let endTime = schedule.getShiftEndTime(for: shiftTime)
+
+        if shiftTime == .off {
             return ""
         }
+
+        let startHour = calendar.component(.hour, from: startTime)
+        let startMinute = calendar.component(.minute, from: startTime)
+        let endHour = calendar.component(.hour, from: endTime)
+        let endMinute = calendar.component(.minute, from: endTime)
+
+        return "\(String(format: "%02d:%02d", startHour, startMinute))-\(String(format: "%02d:%02d", endHour, endMinute))"
     }
 
     private func colorForShiftTime(_ shiftTime: ShiftTime) -> Color {
@@ -163,7 +168,7 @@ struct SchedulePreview: View {
                 .padding()
 
             SchedulePreview(
-                schedule: ShiftWorkSchedule(shiftType: .threeShift),
+                schedule: ShiftWorkSchedule(pattern: ShiftPattern.presets[5]),
                 daysToShow: 14
             )
             .padding()

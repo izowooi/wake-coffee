@@ -161,29 +161,11 @@ class ShiftWorkViewModel: ObservableObject {
     }
 
     private func getShiftStartTime(for shiftTime: ShiftTime) -> Date {
-        switch shiftTime {
-        case .day:
-            return schedule.dayShiftStart
-        case .night:
-            return schedule.nightShiftStart
-        case .evening:
-            return Calendar.current.date(from: DateComponents(hour: 15, minute: 0))!
-        case .off:
-            return Date()
-        }
+        return schedule.getShiftStartTime(for: shiftTime)
     }
 
     private func getShiftEndTime(for shiftTime: ShiftTime) -> Date {
-        switch shiftTime {
-        case .day:
-            return schedule.dayShiftEnd
-        case .night:
-            return schedule.nightShiftEnd
-        case .evening:
-            return Calendar.current.date(from: DateComponents(hour: 23, minute: 0))!
-        case .off:
-            return Date()
-        }
+        return schedule.getShiftEndTime(for: shiftTime)
     }
 
     // MARK: - Statistics

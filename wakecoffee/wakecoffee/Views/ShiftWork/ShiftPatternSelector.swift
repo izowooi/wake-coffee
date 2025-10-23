@@ -11,6 +11,7 @@ struct ShiftPatternSelector: View {
     @Binding var schedule: ShiftWorkSchedule
     @State private var showingDatePicker = false
     @State private var showingTimeSettings = false
+    @State private var showingPatternSelector = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -22,25 +23,46 @@ struct ShiftPatternSelector: View {
                     .font(.headline)
             }
 
-            // 교대 유형 선택
-            VStack(alignment: .leading, spacing: 8) {
-                Text("교대 유형")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-
-                Picker("교대 유형", selection: $schedule.shiftType) {
-                    ForEach(ShiftType.allCases.filter { $0 != .custom }, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
+            // 현재 선택된 패턴 표시
+            Button(action: {
+                showingPatternSelector = true
+            }) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("교대 유형")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.gray)
                     }
-                }
-                .pickerStyle(.segmented)
 
-                // 패턴 설명
-                Text(shiftTypeDescription)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.top, 4)
+                    HStack {
+                        Text(schedule.pattern.name)
+                            .font(.headline)
+                        Spacer()
+                        Text(schedule.pattern.shortPattern)
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+
+                    Text(schedule.pattern.description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 2)
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white)
+                .cornerRadius(10)
+                .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 1)
             }
+            .buttonStyle(PlainButtonStyle())
 
             Divider()
 
@@ -100,13 +122,25 @@ struct ShiftPatternSelector: View {
                             .foregroundColor(.secondary)
                     }
 
-                    if schedule.shiftType != .twoShift {
+                    if schedule.pattern.cycle.contains(.night) {
                         HStack {
                             Text("🌙")
                             Text("야간")
                                 .font(.subheadline)
                             Spacer()
                             Text("\(timeString(schedule.nightShiftStart)) - \(timeString(schedule.nightShiftEnd))")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    if schedule.pattern.cycle.contains(.evening) {
+                        HStack {
+                            Text("🌆")
+                            Text("저녁")
+                                .font(.subheadline)
+                            Spacer()
+                            Text("\(timeString(schedule.eveningShiftStart)) - \(timeString(schedule.eveningShiftEnd))")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -125,18 +159,8 @@ struct ShiftPatternSelector: View {
         .sheet(isPresented: $showingTimeSettings) {
             ShiftTimeSettingsSheet(schedule: $schedule)
         }
-    }
-
-    private var shiftTypeDescription: String {
-        switch schedule.shiftType {
-        case .twoShift:
-            return "2일 주간 근무 → 2일 휴무 반복"
-        case .threeShift:
-            return "2일 주간 → 2일 야간 → 2일 휴무 반복"
-        case .fourShift:
-            return "2일 주간 → 2일 야간 → 2일 저녁 → 2일 휴무 반복"
-        case .custom:
-            return "사용자 정의 패턴"
+        .sheet(isPresented: $showingPatternSelector) {
+            PatternSelectorSheet(selectedPattern: $schedule.pattern)
         }
     }
 
@@ -144,6 +168,101 @@ struct ShiftPatternSelector: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
+    }
+}
+
+// 패턴 선택 시트
+struct PatternSelectorSheet: View {
+    @Binding var selectedPattern: ShiftPattern
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+
+    var filteredPatterns: [ShiftPattern] {
+        if searchText.isEmpty {
+            return ShiftPattern.presets
+        }
+        return ShiftPattern.presets.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.description.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(filteredPatterns) { pattern in
+                    Button(action: {
+                        selectedPattern = pattern
+                        dismiss()
+                    }) {
+                        PatternRow(
+                            pattern: pattern,
+                            isSelected: pattern.id == selectedPattern.id
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .listStyle(.insetGrouped)
+            .searchable(text: $searchText, prompt: "패턴 검색")
+            .navigationTitle("교대 패턴 선택")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("취소") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 패턴 행
+struct PatternRow: View {
+    let pattern: ShiftPattern
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(pattern.name)
+                        .font(.headline)
+                        .foregroundColor(isSelected ? .blue : .primary)
+
+                    Text(pattern.shortPattern)
+                        .font(.caption)
+                        .foregroundColor(isSelected ? .blue : .secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background((isSelected ? Color.blue : Color.gray).opacity(0.1))
+                        .cornerRadius(4)
+                }
+
+                Text(pattern.description)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                // 패턴 시각화
+                HStack(spacing: 2) {
+                    ForEach(Array(pattern.cycle.enumerated()), id: \.offset) { index, shift in
+                        Text(shift.icon)
+                            .font(.system(size: 12))
+                    }
+                }
+                .padding(.top, 4)
+            }
+
+            Spacer()
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 
@@ -190,25 +309,27 @@ struct ShiftTimeSettingsSheet: View {
     var body: some View {
         NavigationView {
             Form {
-                Section {
-                    DatePicker(
-                        "시작",
-                        selection: $schedule.dayShiftStart,
-                        displayedComponents: .hourAndMinute
-                    )
-                    DatePicker(
-                        "종료",
-                        selection: $schedule.dayShiftEnd,
-                        displayedComponents: .hourAndMinute
-                    )
-                } header: {
-                    HStack {
-                        Text("🌞")
-                        Text("주간 근무")
+                if schedule.pattern.cycle.contains(.day) {
+                    Section {
+                        DatePicker(
+                            "시작",
+                            selection: $schedule.dayShiftStart,
+                            displayedComponents: .hourAndMinute
+                        )
+                        DatePicker(
+                            "종료",
+                            selection: $schedule.dayShiftEnd,
+                            displayedComponents: .hourAndMinute
+                        )
+                    } header: {
+                        HStack {
+                            Text("🌞")
+                            Text("주간 근무")
+                        }
                     }
                 }
 
-                if schedule.shiftType != .twoShift {
+                if schedule.pattern.cycle.contains(.night) {
                     Section {
                         DatePicker(
                             "시작",
@@ -224,6 +345,26 @@ struct ShiftTimeSettingsSheet: View {
                         HStack {
                             Text("🌙")
                             Text("야간 근무")
+                        }
+                    }
+                }
+
+                if schedule.pattern.cycle.contains(.evening) {
+                    Section {
+                        DatePicker(
+                            "시작",
+                            selection: $schedule.eveningShiftStart,
+                            displayedComponents: .hourAndMinute
+                        )
+                        DatePicker(
+                            "종료",
+                            selection: $schedule.eveningShiftEnd,
+                            displayedComponents: .hourAndMinute
+                        )
+                    } header: {
+                        HStack {
+                            Text("🌆")
+                            Text("저녁 근무")
                         }
                     }
                 }
