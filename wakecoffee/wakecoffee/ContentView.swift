@@ -16,9 +16,19 @@ struct ContentView: View {
                 // 근무 유형이 선택된 경우 해당 화면 표시
                 switch workMode {
                 case .regular:
-                    RegularWorkView()
+                    RegularWorkView(currentWorkMode: Binding(
+                        get: { workMode },
+                        set: { newMode in
+                            selectedWorkMode = newMode
+                        }
+                    ))
                 case .shift:
-                    ShiftWorkView()
+                    ShiftWorkView(currentWorkMode: Binding(
+                        get: { workMode },
+                        set: { newMode in
+                            selectedWorkMode = newMode
+                        }
+                    ))
                 }
             } else {
                 // 근무 유형이 선택되지 않은 경우 온보딩 화면 표시

@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct RegularWorkView: View {
+    @Binding var currentWorkMode: WorkMode
     @StateObject private var viewModel = RegularWorkViewModel()
     @State private var showingAddAlarm = false
     @State private var showingStatistics = false
@@ -69,11 +70,11 @@ struct RegularWorkView: View {
             StatisticsView()
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView()
+            SettingsView(currentWorkMode: $currentWorkMode)
         }
     }
 }
 
 #Preview {
-    RegularWorkView()
+    RegularWorkView(currentWorkMode: .constant(.regular))
 }

@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ShiftWorkView: View {
+    @Binding var currentWorkMode: WorkMode
     @StateObject private var viewModel = ShiftWorkViewModel()
     @State private var showingAddAlarm = false
     @State private var showingStatistics = false
@@ -93,7 +94,7 @@ struct ShiftWorkView: View {
             StatisticsView()
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView()
+            SettingsView(currentWorkMode: $currentWorkMode)
         }
     }
 }
@@ -140,5 +141,5 @@ struct ShiftAlarmCard: View {
 }
 
 #Preview {
-    ShiftWorkView()
+    ShiftWorkView(currentWorkMode: .constant(.shift))
 }

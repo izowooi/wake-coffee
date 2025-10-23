@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Binding var currentWorkMode: WorkMode
 
     @State private var notificationsEnabled = true
     @State private var soundEnabled = true
@@ -16,10 +17,43 @@ struct SettingsView: View {
     @State private var defaultStartTime = Calendar.current.date(from: DateComponents(hour: 9, minute: 0))!
     @State private var defaultEndTime = Calendar.current.date(from: DateComponents(hour: 18, minute: 0))!
     @State private var showingNotificationAlert = false
+    @State private var showingWorkModeAlert = false
+    @State private var tempWorkMode: WorkMode
+
+    init(currentWorkMode: Binding<WorkMode>) {
+        self._currentWorkMode = currentWorkMode
+        self._tempWorkMode = State(initialValue: currentWorkMode.wrappedValue)
+    }
 
     var body: some View {
         NavigationView {
             Form {
+                // 근무 유형 설정
+                Section {
+                    Picker("근무 유형", selection: $tempWorkMode) {
+                        HStack {
+                            Image(systemName: "briefcase.fill")
+                            Text("일반근무")
+                        }
+                        .tag(WorkMode.regular)
+
+                        HStack {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text("교대근무")
+                        }
+                        .tag(WorkMode.shift)
+                    }
+                    .onChange(of: tempWorkMode) { oldValue, newValue in
+                        if oldValue != newValue {
+                            showingWorkModeAlert = true
+                        }
+                    }
+                } header: {
+                    Label("근무 유형", systemImage: "person.fill")
+                } footer: {
+                    Text("근무 유형을 변경하면 해당 근무 유형의 화면으로 전환됩니다.")
+                }
+
                 // 알림 설정
                 Section {
                     Toggle("알림 허용", isOn: $notificationsEnabled)
@@ -130,6 +164,18 @@ struct SettingsView: View {
             } message: {
                 Text("알림 권한을 변경하려면 설정 앱에서 Wake Coffee의 알림 설정을 변경해주세요.")
             }
+            .alert("근무 유형 변경", isPresented: $showingWorkModeAlert) {
+                Button("변경") {
+                    currentWorkMode = tempWorkMode
+                    DataManager.shared.saveWorkMode(tempWorkMode)
+                    dismiss()
+                }
+                Button("취소", role: .cancel) {
+                    tempWorkMode = currentWorkMode
+                }
+            } message: {
+                Text("근무 유형을 \(tempWorkMode == .regular ? "일반근무" : "교대근무")로 변경하시겠습니까?")
+            }
         }
     }
 
@@ -145,5 +191,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(currentWorkMode: .constant(.regular))
 }
