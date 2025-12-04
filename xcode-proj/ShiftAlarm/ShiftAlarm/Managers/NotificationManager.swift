@@ -87,6 +87,13 @@ class NotificationManager: ObservableObject {
 
     /// 개별 알람 설정
     private func scheduleNotification(for schedule: WorkSchedule, at alarmTime: Date) async {
+        // 과거 시간은 알람 등록 안 함
+        let now = Date()
+        if alarmTime <= now {
+            print("⏭️ Skipped (past time): \(alarmTime)")
+            return
+        }
+
         let calendar = Calendar.current
         let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: alarmTime)
 
@@ -111,6 +118,12 @@ class NotificationManager: ObservableObject {
 
         content.sound = .default
         content.badge = 1
+
+        // Time Sensitive 설정 (iOS 15+)
+        // Focus 모드 우회 및 화면 즉시 점등
+        if #available(iOS 15.0, *) {
+            content.interruptionLevel = .timeSensitive
+        }
 
         // 트리거 설정 (매일 반복하지 않고 특정 날짜/시간에만)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)

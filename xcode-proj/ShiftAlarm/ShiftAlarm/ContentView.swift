@@ -9,8 +9,20 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    @StateObject private var notificationManager = NotificationManager.shared
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
     var body: some View {
-        CalendarView()
+        Group {
+            if hasCompletedOnboarding {
+                CalendarView()
+            } else {
+                OnboardingView(
+                    notificationManager: notificationManager,
+                    hasCompletedOnboarding: $hasCompletedOnboarding
+                )
+            }
+        }
     }
 }
 
